@@ -21,12 +21,12 @@
 
 
 class NGWConnectionSettings():
-    def __init__(self, connection_name=None, server_url=None, username=None, password=None):
+    def __init__(self, connection_name=None, server_url=None, username=None, password=None, oauth=None):
         self.connection_name = connection_name
         self.server_url = server_url
         self.username = username
         self.password = password
-
+        self.oauth = oauth
         self.proxy_enable = False
 
     def set_proxy(self, host, port, user, password):
@@ -45,6 +45,8 @@ class NGWConnectionSettings():
             return False
         if self.password != other.password:
             return False
+        if self.oauth != other.oauth:
+            return False
         return True
 
     def equalWoProtocol(self, other):
@@ -57,5 +59,7 @@ class NGWConnectionSettings():
         if self.username != other.username:
             return False
         if self.password != other.password:
+            return False
+        if self.oauth != other.oauth:
             return False
         return True

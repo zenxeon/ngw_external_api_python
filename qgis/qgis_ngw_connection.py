@@ -29,8 +29,11 @@ from qgis.core import *
 from qgis.utils import iface
 
 from ..core.ngw_error import NGWError
+from ..core.ngw_error import NoOAuthAuthError
 
 from ..utils import log
+
+from .ngstd_auth import NgStd
 
 from ..compat_py import CompatPy
 from .compat_qgis import CompatQgis
@@ -55,6 +58,7 @@ class QgsNgwConnection(QObject):
 
         self.__server_url = None
         self.__auth = ("", "")
+        self.__oauth = False
         self.set_from_settings(conn_settings)
 
         self.__ngw_components = None
@@ -63,6 +67,7 @@ class QgsNgwConnection(QObject):
     def set_from_settings(self, conn_settings):
         self.server_url = conn_settings.server_url
         self.set_auth(conn_settings.username, conn_settings.password)
+        self.__oauth = conn_settings.oauth
 
 
     def set_auth(self, username, password):
@@ -168,11 +173,21 @@ class QgsNgwConnection(QObject):
 
         req = QNetworkRequest(QUrl(url))
 
-        if all(map(len, self.__auth)):
-            authstr = ('%s:%s' % self.__auth).encode('utf-8')
-            authstr = QByteArray(authstr).toBase64()
-            authstr = QByteArray(('Basic ').encode('utf-8')).append(authstr)
-            req.setRawHeader(("Authorization").encode('utf-8'), authstr)
+        if self.__oauth:
+            if not NgStd.has_auth():
+                raise NoOAuthAuthError()
+            h = NgStd.get_auth_header() # will get token or refresh it internally
+            if h is None or h == '':
+                log(u'Failed to get authentication header via NgStd')
+                raise Exception('No OAuth header')
+            h = h.split(u': ')
+            req.setRawHeader(h[0].encode('utf-8'), h[1].encode('utf-8'))
+        else:
+            if all(map(len, self.__auth)):
+                authstr = ('%s:%s' % self.__auth).encode('utf-8')
+                authstr = QByteArray(authstr).toBase64()
+                authstr = QByteArray(('Basic ').encode('utf-8')).append(authstr)
+                req.setRawHeader(("Authorization").encode('utf-8'), authstr)
 
         if headers is not None: # add custom headers
             for k, v in list(headers.items()):

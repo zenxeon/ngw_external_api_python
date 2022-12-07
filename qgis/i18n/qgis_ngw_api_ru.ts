@@ -36,6 +36,11 @@
         <translation>URL</translation>
     </message>
     <message>
+        <location filename="ngw_connection_edit_dialog_base.ui"/>
+        <source>Local account</source>
+        <translation>Локальная учётная запись</translation>
+    </message>
+    <message>
         <location filename="ngw_connection_edit_dialog_base.ui" line="92"/>
         <source>As guest</source>
         <translation>Как гость</translation>

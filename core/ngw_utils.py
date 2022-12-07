@@ -80,7 +80,7 @@ def ngw_resource_from_qgs_map_layer(qgs_map_layer):
     #additionAttrs.update({u'baseURL':baseURL})
     #additionAttrs.update({u'resourceId':ngw_resources_id})
 
-    ngwConnectionSettings = NGWConnectionSettings("ngw", baseURL, ngw_username, ngw_password)
+    ngwConnectionSettings = NGWConnectionSettings("ngw", baseURL, ngw_username, ngw_password, False)
     ngwConnection = NGWConnection(ngwConnectionSettings)
 
     ngwResourceFactory = NGWResourceFactory(ngwConnection)

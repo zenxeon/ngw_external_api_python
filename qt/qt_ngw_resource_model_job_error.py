@@ -64,3 +64,8 @@ class JobAuthorizationError(JobNGWError):
 	"""NGW cann't execute request for perform the job because user does not have rights"""
 	def __init__(self, url):
 		super(JobAuthorizationError, self).__init__("", url)
+
+class JobNoOAuthAuthError(NGWResourceModelJobError):
+	def __init__(self, msg):
+		super(JobNoOAuthAuthError, self).__init__(msg)
+

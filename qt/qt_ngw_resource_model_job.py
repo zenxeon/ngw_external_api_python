@@ -26,6 +26,7 @@ import traceback
 from qgis.PyQt.QtCore import *
 
 from ..core.ngw_error import NGWError
+from ..core.ngw_error import NoOAuthAuthError
 from ..core.ngw_resource import NGWResource
 from ..core.ngw_resource_creator import ResourceCreator
 from ..core.ngw_resource_factory import NGWResourceFactory
@@ -135,6 +136,9 @@ class NGWResourceModelJob(QObject):
 
             else:
                 self.errorOccurred.emit(JobServerRequestError(self.tr("Something wrong with request to server"), e.url))
+
+        except NoOAuthAuthError as e:
+            self.errorOccurred.emit(JobNoOAuthAuthError(''))
 
         except NGWResourceModelJobError as e:
             self.errorOccurred.emit(e)

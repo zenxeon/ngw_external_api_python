@@ -47,7 +47,8 @@ class NgwPluginSettings(PluginSettings):
             connection_name,
             settings.value(key + '/server_url', '', type=str),
             settings.value(key + '/username', '', type=str),
-            settings.value(key + '/password', '', type=str)
+            settings.value(key + '/password', '', type=str),
+            settings.value(key + '/oauth', False, type=bool)
         )
 
     @classmethod
@@ -57,6 +58,7 @@ class NgwPluginSettings(PluginSettings):
         settings.setValue(key + '/server_url', connection_settings.server_url)
         settings.setValue(key + '/username', connection_settings.username)
         settings.setValue(key + '/password', connection_settings.password)
+        settings.setValue(key + '/oauth', bool(connection_settings.oauth))
 
     @classmethod
     def get_selected_ngw_connection_name(cls):

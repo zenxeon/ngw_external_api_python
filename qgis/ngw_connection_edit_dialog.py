@@ -85,6 +85,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         completer.setCompletionMode(QCompleter.PopupCompletion)
         self.leUrl.setCompleter(completer)
 
+        self.cbLocalAccount.toggled.connect(self.__cbLocalAccountChecked)
         self.cbAsGuest.toggled.connect(self.__cbAsGuestChecked)
 
         self.leUrl.textEdited.connect(self.__url_changed)
@@ -106,6 +107,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
         )
         self.lAccessLink.setText(accessLinkHtml)
 
+        self.__cbLocalAccountChecked(self.cbLocalAccount.checkState())
         self.__cbAsGuestChecked(self.cbAsGuest.checkState())
 
         self.ngw_conn_sett = ngw_connection_settings
@@ -114,15 +116,24 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             self.leUrl.setText(self.ngw_conn_sett.server_url)
             self.leName.setText(self.ngw_conn_sett.connection_name)
 
+            if self.ngw_conn_sett.oauth:
+                self.cbLocalAccount.setCheckState(Qt.Unchecked)
+            else:
+                self.cbLocalAccount.setCheckState(Qt.Checked)
+
             if self.ngw_conn_sett.username == "":
                 self.cbAsGuest.setCheckState(Qt.Checked)
-                self.leUser.setText("administrator")
+                #self.leUser.setText("administrator")
             else:
                 self.cbAsGuest.setCheckState(Qt.Unchecked)
                 self.leUser.setText(self.ngw_conn_sett.username)
                 self.lePassword.setText(self.ngw_conn_sett.password)
         else:
-            self.leUser.setText("administrator")
+            #self.leUser.setText("administrator")
+            self.cbLocalAccount.setCheckState(Qt.Unchecked)
+            self.cbAsGuest.setCheckState(Qt.Checked)
+            self.leUser.setText('')
+            self.lePassword.setText('')
 
         self.mutexPing = QMutex()
         self.needNextPing = False
@@ -184,7 +195,7 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             return hostname + url
 
         # Force https regardless of what user has selected, but only for cloud connections.
-        if url.startswith('http://') and url.endswith('.nextgis.com') and not self.force_http:
+        if url.startswith('http://') and url.endswith('.nextgis.com') and not url.endswith('.staging.nextgis.com') and not self.force_http:
             return url.replace('http://', 'https://')
 
         return url
@@ -202,13 +213,26 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
         self.leName.setText(connection_name)
 
+    def __cbLocalAccountChecked(self, is_local_acc):
+        if is_local_acc:
+            self.gbLocalAccount.show()
+            self.adjustSize()
+        else:
+            self.gbLocalAccount.hide()
+            self.adjustSize()
+
+
     def __cbAsGuestChecked(self, as_guest):
         accessLinkHtml = ""
         if not as_guest:
+            self.lbUser.setEnabled(True)
             self.leUser.setEnabled(True)
+            self.lbPassword.setEnabled(True)
             self.lePassword.setEnabled(True)
         else:
+            self.lbUser.setEnabled(False)
             self.leUser.setEnabled(False)
+            self.lbPassword.setEnabled(False)
             self.lePassword.setEnabled(False)
 
     def __name_changed_process(self, text):
@@ -264,7 +288,8 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             name,
             url,
             user,
-            password
+            password,
+            False
         )
 
         self.pinger = NGWPinger(ngw_conn_sett)
@@ -325,6 +350,8 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
 
         url = self.__make_valid_url(url)
 
+        oauth = not self.cbLocalAccount.checkState()
+
         user = ""
         passward = ""
         if self.cbAsGuest.checkState() == Qt.Unchecked:
@@ -335,7 +362,8 @@ class NGWConnectionEditDialog(QDialog, FORM_CLASS):
             name,
             url,
             user,
-            passward)
+            passward,
+            oauth)
 
         QDialog.accept(self)
 

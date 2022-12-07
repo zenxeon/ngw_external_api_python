@@ -36,3 +36,13 @@ class NGWError(Exception):
 
     def __str__(self):
         return self.message
+
+class NoOAuthAuthError(Exception):
+
+    def __init__(self):
+        self.message = 'No OAuth authentication'
+
+    def __str__(self):
+        return self.message
+
+
