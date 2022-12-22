@@ -71,6 +71,11 @@ class NgwPluginSettings(PluginSettings):
         settings.setValue('/ui/selectedConnection', connection_name)
 
     @classmethod
+    def get_need_oauth(cls):
+        con_name = cls.get_selected_ngw_connection_name()
+        return cls.get_ngw_connection(con_name).oauth
+
+    @classmethod
     def get_ngw_connection_names(cls):
         settings = cls.get_settings()
         settings.beginGroup('/connections')

@@ -13,9 +13,24 @@ except:
 
 class NgStd:
 
+    # @classmethod
+    # def has_ngstd(cls):
+    #     return HAS_NGSTD
+
     @classmethod
     def instance(cls):
         return NGAccess.instance()
+
+    @classmethod
+    def add_auth_url(cls, endpoint):
+        try:
+            ok = NGRequest.addAuthURL(NGAccess.instance().endPoint(), endpoint)
+            if ok:
+                log(u'Successfully added auth URL "{}" to NgStd'.format(endpoint))
+            else:
+                log(u'Unable to add auth URL to NgStd: returned False')
+        except:
+            log(u'Failed to add auth URL to NgStd: exception')
 
     @classmethod
     def has_auth(cls):

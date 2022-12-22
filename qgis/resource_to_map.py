@@ -43,11 +43,17 @@ def _add_aliases(qgs_vector_layer, ngw_vector_layer):
             continue
         CompatQgis.set_field_alias(qgs_vector_layer, field_name, field_alias)
 
-def _add_geojson_layer(resource):
+def _add_geojson_layer(resource, ouath):
     if not isinstance(resource, NGWVectorLayer):
         raise Exception('Resource type is not VectorLayer!')
-    qgs_geojson_layer = QgsVectorLayer(resource.get_absolute_geojson_url(), resource.common.display_name, 'ogr')
+    if ouath:
+        url = resource.get_absolute_geojson_url_oauth_ngstd()
+    else:
+        url = resource.get_absolute_geojson_url()
+    log(u'Creating GeoJSON vector layer with URL "{}"'.format(url))
+    qgs_geojson_layer = QgsVectorLayer(url, resource.common.display_name, 'ogr')
     if not qgs_geojson_layer.isValid():
+        log(u'Failed to create layer')
         raise Exception('Layer %s can\'t be added to the map!' % resource.common.display_name)
     qgs_geojson_layer.dataProvider().setEncoding('UTF-8')
     return qgs_geojson_layer
@@ -58,9 +64,10 @@ def _add_cog_raster_layer(resource):
     if not resource.is_cog:
         raise UnsupportedRasterTypeException()
     url = '{}/cog'.format(resource.get_absolute_api_url_with_auth())
+    log(u'Creating COG raster layer with URL "{}"'.format(url))
     qgs_raster_layer = QgsRasterLayer(url, resource.common.display_name, 'gdal')
     if not qgs_raster_layer.isValid():
-        log('Failed to add raster layer to QGIS. URL: {}'.format(url))
+        log(u'Failed to create layer')
         raise Exception('Layer "%s" can\'t be added to the map!' % resource.common.display_name)
     return qgs_raster_layer
 
@@ -98,8 +105,8 @@ def _apply_style(style_resource, qgs_layer):
         qgs_layer.loadNamedStyle(filename)
 
 
-def add_resource_as_geojson(resource, return_extent=False):
-    qgs_geojson_layer = _add_geojson_layer(resource)
+def add_resource_as_geojson(resource, return_extent=False, oauth=False):
+    qgs_geojson_layer = _add_geojson_layer(resource, oauth)
 
     _add_aliases(qgs_geojson_layer, resource)
 
@@ -111,8 +118,8 @@ def add_resource_as_geojson(resource, return_extent=False):
             return qgs_geojson_layer.extent()
 
 
-def add_resource_as_geojson_with_style(resource, style_resource, return_extent=False):
-    qgs_geojson_layer = _add_geojson_layer(resource)
+def add_resource_as_geojson_with_style(resource, style_resource, return_extent=False, oauth=False):
+    qgs_geojson_layer = _add_geojson_layer(resource, oauth)
 
     _apply_style(style_resource, qgs_geojson_layer)
 
