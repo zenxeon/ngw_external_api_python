@@ -1075,7 +1075,7 @@ class QGISResourcesImporter(QGISResourceJob):
                     )
                     self.putAddedResourceToResult(ngw_style)
                     ngw_resource.update()
-                
+
                 # check and import attachments
                 if ngw_resource.type_id == NGWVectorLayer.type_id:
                     self.importAttachments(qgs_map_layer, ngw_resource)
@@ -1280,7 +1280,6 @@ class CurrentQGISProjectImporter(QGISResourceJob):
             QgsProject.instance()
         )
         rectangle = ct.transform(rectangle)
-        # log(">>> rectangle 2: " + str(rectangle.asPolygon()))
         ngw_webmap_items_as_dicts = [item.toDict() for item in ngw_webmap_items]
         ngw_resource = NGWWebMap.create_in_group(
             ngw_webmap_name,

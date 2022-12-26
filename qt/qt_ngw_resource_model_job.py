@@ -147,7 +147,6 @@ class NGWResourceModelJob(QObject):
             exc_type, exc_value, exc_traceback = sys.exc_info()
             extracted_list = traceback.extract_tb(exc_traceback)
             extracted_list = [(f.split("\\")[-1], l, func, text) for f, l, func, text in extracted_list]
-            #log(">>> Unexpected error: %s %s\n%s" % (type(e), e, traceback.format_list(extracted_list)) )
             log('ERROR: \n{}'.format(traceback.format_exc()))
             self.errorOccurred.emit(JobInternalError(str(e), traceback.format_list(extracted_list)))
 

@@ -50,7 +50,7 @@ def _add_geojson_layer(resource, ouath):
         url = resource.get_absolute_geojson_url_oauth_ngstd()
     else:
         url = resource.get_absolute_geojson_url()
-    log(u'Creating GeoJSON vector layer with URL "{}"'.format(url))
+    log(u'>>> Creating GeoJSON vector layer')# with URL "{}"'.format(url))
     qgs_geojson_layer = QgsVectorLayer(url, resource.common.display_name, 'ogr')
     if not qgs_geojson_layer.isValid():
         log(u'Failed to create layer')
@@ -64,7 +64,7 @@ def _add_cog_raster_layer(resource):
     if not resource.is_cog:
         raise UnsupportedRasterTypeException()
     url = '{}/cog'.format(resource.get_absolute_api_url_with_auth())
-    log(u'Creating COG raster layer with URL "{}"'.format(url))
+    log(u'>>> Creating COG raster layer')# with URL "{}"'.format(url))
     qgs_raster_layer = QgsRasterLayer(url, resource.common.display_name, 'gdal')
     if not qgs_raster_layer.isValid():
         log(u'Failed to create layer')
@@ -150,7 +150,7 @@ def add_resource_as_cog_raster_with_style(resource, style_resource):
         raise Exception('Failed to add layer to QGIS')
 
 
-def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
+def add_resource_as_wfs_layers(wfs_resource, return_extent=False, oauth=False):
     if not isinstance(wfs_resource, NGWWfsService):
         raise NGWError('Resource type is not WfsService!')
     #Extent stuff
@@ -163,6 +163,9 @@ def add_resource_as_wfs_layers(wfs_resource, return_extent=False):
     #Add layers
     for wfs_layer in wfs_resource.wfs.layers:
         url = wfs_resource.get_wfs_url(wfs_layer.keyname) + '&srsname=EPSG:3857&VERSION=1.0.0&REQUEST=GetFeature'
+        if oauth:
+            url += '&authcfg=NextGIS'
+        log(u'>>> Creating WFS vector layer')# with URL "{}"'.format(url))
         qgs_wfs_layer = QgsVectorLayer(url, wfs_layer.display_name, 'WFS')
 
         ngw_vector_layer = wfs_resource.get_source_layer(wfs_layer.resource_id)

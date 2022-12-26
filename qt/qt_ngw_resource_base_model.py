@@ -499,7 +499,6 @@ class QNGWResourcesBaseModel(QAbstractItemModel):
                 job.model_response.done.emit(new_index)
 
         for ngw_resource in job_result.deleted_resources:
-            # log(">>> delete ngw_resource: " + str(ngw_resource))
             index = self.getIndexByNGWResourceId(
                 ngw_resource.common.parent.id,
                 self.index(0, 0, QModelIndex())
