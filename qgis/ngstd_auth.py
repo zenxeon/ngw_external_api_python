@@ -45,7 +45,7 @@ class NgStd:
     def get_auth_header(cls):
         try:
             header = NGRequest.getAuthHeader(NGAccess.instance().endPoint())
-            log(u'Successfully get oauth header')
+            #log(u'Successfully get oauth header')
             return header
         except:
             log(u'Failed to get oauth header')
