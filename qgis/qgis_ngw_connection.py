@@ -77,29 +77,38 @@ class QgsNgwConnection(QObject):
         return self.__auth
 
 
+    def _get_json_param(self, j, key, def_val):
+        try:
+            return j[key]
+        except:
+            return def_val
+
+
     def get(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, 'GET', params, **kwargs)
+        return self.__request_json(sub_url, 'GET', params, True, **kwargs)
 
     def post(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, 'POST', params, **kwargs)
+        return self.__request_json(sub_url, 'POST', params, True, **kwargs)
 
     def put(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, 'PUT', params, **kwargs)
+        return self.__request_json(sub_url, 'PUT', params, True, **kwargs)
 
     def patch(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, 'PATCH', params, **kwargs)
+        return self.__request_json(sub_url, 'PATCH', params, True, **kwargs)
 
     def delete(self, sub_url, params=None, **kwargs):
-        return self.__request_json(sub_url, 'DELETE', params, **kwargs)
+        return self.__request_json(sub_url, 'DELETE', params, True, **kwargs)
 
 
-    def post_lunkwill(self, sub_url, params=None, **kwargs):
+    def post_lunkwill(self, sub_url, params=None, extended_log=False, **kwargs):
         """
         Make a long POST request to NGW server which supports "Lunkwill".
         """
+        default_wait_ms = 2000
+
         # Add specific header to the first request.
         headers = {'X-Lunkwill': 'suggest'}
-        rep, j = self.__request_rep_json(sub_url, 'POST', params, headers, **kwargs)
+        rep, j = self.__request_rep_json(sub_url, 'POST', params, headers, True, **kwargs)
 
         # Check that server supports lunkwill and return reply immideately if not (the request just has been processed
         # as usual NGW API request).
@@ -113,35 +122,40 @@ class QgsNgwConnection(QObject):
                 summary_failed_attempts = 3
                 summary_failed = 0
                 request_id = j['id']
+
+                if not extended_log:
+                    log('Skip lunkwill summary requests logging for id "{}"'.format(request_id))
+
                 while True:
                     status = j['status']
-                    delay_ms = j['delay_ms']
-                    retry_ms = j['retry_ms']
+                    delay_ms = self._get_json_param(j, 'delay_ms', default_wait_ms) # this param could be not included into reply
+                    retry_ms = self._get_json_param(j, 'retry_ms', default_wait_ms)
 
                     if summary_failed == 0:
                         wait_ms = delay_ms / 1000
                     elif summary_failed <= summary_failed_attempts:
                         wait_ms = retry_ms / 1000
                     else:
-                        raise Exception('Lunkwill request aborted: failed "summary" sub-requests count exceeds maximum')
+                        raise Exception('Lunkwill request aborted: failed summary requests count exceeds maximum')
 
-                    if status == 'processing':
+                    if status == 'processing' or status == 'spooled' or status == 'buffering':
                         time.sleep(wait_ms)
                         try:
                             sub_url = '/api/lunkwill/{}/summary'.format(request_id)
-                            j = self.get(sub_url, **kwargs)
+                            j = self.__request_json(sub_url, 'GET', None, extended_log, **kwargs)
                             summary_failed = 0
                         except:
-                            log('Lunkwill "summary" sub-request failed. Try again')
+                            if extended_log:
+                                log('Lunkwill summary request failed. Try again')
                             summary_failed += 1
 
                     elif status == 'ready':
                         sub_url = '/api/lunkwill/{}/response'.format(request_id)
-                        j = self.get(sub_url, **kwargs)
+                        j = self.__request_json(sub_url, 'GET', None, True, **kwargs)
                         break
 
                     else:
-                        raise Exception('Lunkwill request failed on server')
+                        raise Exception('Lunkwill request failed on server. Reply: {}'.format(str(j)))
 
         rep.deleteLater()
         del rep
@@ -149,7 +163,7 @@ class QgsNgwConnection(QObject):
         return j
 
 
-    def __request_rep(self, sub_url, method, badata=None, params=None, headers=None, **kwargs):
+    def __request_rep(self, sub_url, method, badata=None, params=None, headers=None, do_log=True, **kwargs):
         json_data = None
         if params:
             json_data = json.dumps(params).encode('utf-8')
@@ -160,16 +174,17 @@ class QgsNgwConnection(QObject):
 
         url = self.server_url + sub_url
 
-        log(u"Request\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
-                method,
-                url,
-                #type(json_data),
-                json_data.decode('unicode_escape') if json_data is not None else None,
-                headers,
-                filename.encode('utf-8') if filename else '-',
-                badata.size() if badata else '-'
+        if do_log:
+            log(u"Request\nmethod: {}\nurl: {}\njson: {}\nheaders: {}\nfile: {}\nbyte data size: {}".format(
+                    method,
+                    url,
+                    #type(json_data),
+                    json_data.decode('unicode_escape') if json_data is not None else None,
+                    headers,
+                    filename.encode('utf-8') if filename else '-',
+                    badata.size() if badata else '-'
+                )
             )
-        )
 
         req = QNetworkRequest(QUrl(url))
 
@@ -266,8 +281,8 @@ class QgsNgwConnection(QObject):
         return req, rep
 
 
-    def __request_rep_json(self, sub_url, method, params=None, headers=None, **kwargs):
-        req, rep = self.__request_rep(sub_url, method, badata=None, params=params, headers=headers, **kwargs)
+    def __request_rep_json(self, sub_url, method, params=None, headers=None, do_log=True, **kwargs):
+        req, rep = self.__request_rep(sub_url, method, badata=None, params=params, headers=headers, do_log=do_log, **kwargs)
 
         status_code = rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
 
@@ -300,8 +315,8 @@ class QgsNgwConnection(QObject):
         return rep, json_response
 
 
-    def __request_json(self, sub_url, method, params=None, **kwargs):
-        rep, j = self.__request_rep_json(sub_url, method, params=params, headers=None, **kwargs)
+    def __request_json(self, sub_url, method, params=None, do_log=True, **kwargs):
+        rep, j = self.__request_rep_json(sub_url, method, params=params, headers=None, do_log=do_log, **kwargs)
 
         rep.deleteLater()
         del rep
@@ -317,7 +332,7 @@ class QgsNgwConnection(QObject):
         return self.put(self.get_upload_file_url(), file=filename)
 
 
-    def tus_upload_file(self, filename, callback):
+    def tus_upload_file(self, filename, callback, extended_log=False):
         """
         Implements tus protocol to upload a file to NGW.
         Note: This method internally uses self methods to send synchronous HTTP requests (which internally use
@@ -339,7 +354,7 @@ class QgsNgwConnection(QObject):
             'Upload-Length': str(file_size),
             #'Upload-Metadata': 'name {}'.format(base64name)
         }
-        create_req, create_rep = self.__request_rep(TUS_UPLOAD_FILE_URL, 'POST', None, None, create_hdrs)
+        create_req, create_rep = self.__request_rep(TUS_UPLOAD_FILE_URL, 'POST', None, None, create_hdrs, True)
         create_rep_code = create_rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
         if create_rep_code == 413:
             raise NGWError(NGWError.TypeRequestError, 'HTTP 413: Payload is too large', TUS_UPLOAD_FILE_URL,
@@ -356,6 +371,11 @@ class QgsNgwConnection(QObject):
         max_retry_count = 3
         bytes_sent = 0
 
+        # Allow to skip logging of PATCH requests. Helpful when a large file is being uploaded.
+        # Note: QGIS 3 has a hardcoded limit of log messages.
+        if not extended_log:
+            log('Skip PATCH requests logging during uploading of file "{}"'.format(file_guid))
+
         # Upload file chunk-by-chunk.
         while True:
             badata = QByteArray(file.read(TUS_CHUNK_SIZE))
@@ -363,6 +383,8 @@ class QgsNgwConnection(QObject):
                 break
             bytes_read = badata.size()
 
+            if extended_log:
+                log("Upload %d from %s" % (bytes_sent, file_size,))
             self.sendUploadProgress(bytes_sent, file_size)
 
             chunk_hdrs = {
@@ -373,7 +395,7 @@ class QgsNgwConnection(QObject):
             }
             retries = 0
             while retries < max_retry_count:
-                chunk_req, chunk_rep = self.__request_rep(file_upload_url, 'PATCH', badata, None, chunk_hdrs)
+                chunk_req, chunk_rep = self.__request_rep(file_upload_url, 'PATCH', badata, None, chunk_hdrs, extended_log)
                 chunk_rep_code = chunk_rep.attribute(QNetworkRequest.HttpStatusCodeAttribute)
                 chunk_rep.deleteLater()
                 del chunk_rep
@@ -386,7 +408,8 @@ class QgsNgwConnection(QObject):
                 break
 
             bytes_sent += bytes_read
-            log('Tus-uploaded chunk of {} bytes. Now {} of overall {} bytes are uploaded'.format(bytes_read, bytes_sent, file_size))
+            if extended_log:
+                log('Tus-uploaded chunk of {} bytes. Now {} of overall {} bytes are uploaded'.format(bytes_read, bytes_sent, file_size))
 
         file.close()
 
@@ -400,7 +423,6 @@ class QgsNgwConnection(QObject):
 
 
     def sendUploadProgress(self, sent, total):
-        log("Upload %d from %s" % (sent, total,))
         # For Qt 5 the uploadProgress signal is sometimes emited when
         # sent and total are 0.
         # TODO: understand why. For now prevent calling uploadProgressCallback()
